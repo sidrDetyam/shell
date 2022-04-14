@@ -38,8 +38,8 @@ static void split_cmds(char* line, vRawCmdLine* cmds){
         }
 
         char* tmp = strpbrk(s, cmd_delim);
-        RawCmdLine line = {s, tmp!=NULL && *tmp == '&'};
-        vRawCmdLine_push_back(cmds, &line);
+        RawCmdLine cmdline = {s, tmp!=NULL && *tmp == '&'};
+        vRawCmdLine_push_back(cmds, &cmdline);
         s = tmp;
 
         if(s==NULL){
@@ -76,7 +76,6 @@ static void extract_arg(char** s, char** arg){
 
 static int parse_cmd(char* cmd, vcharptr_t* argv, char** infile, char** outfile, int* is_append){
 
-    size_t argc = 0;
     char* s = cmd;
     *infile = NULL;
     *outfile = NULL;
@@ -210,7 +209,7 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
 }
 
 
-int parse_line(char* line, ProcessPipeline** ppls){
+int parseline(char* line, ProcessPipeline** ppls){
 
     vRawCmdLine cmds;
     split_cmds(line, &cmds);
@@ -223,6 +222,7 @@ int parse_line(char* line, ProcessPipeline** ppls){
 
     for(int i=0; i<cmds.cnt; ++i){
         int res = parse_ppl(cmds.ptr[i].line, *ppls + i);
+        (*ppls)[i].flags |= IS_BG;
         if(res!=0){
             free(*ppls);
             vRawCmdLine_free(&cmds);

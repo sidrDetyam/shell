@@ -1,8 +1,8 @@
 
 #include <stdio.h>
-  #include <unistd.h>
-   #include <string.h>
-   #include "shell.h"
+#include <unistd.h>
+#include <string.h>
+#include "shell.h"
   
    int promptline(char *prompt, char *line, int sizline)
    {

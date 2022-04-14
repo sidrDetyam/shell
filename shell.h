@@ -1,18 +1,6 @@
 
-#define MAXARGS 256
-#define MAXCMDS 50
+#include "process_types.h"
 
-struct command {
-    char *cmdargs[MAXARGS];
-    char cmdflag;
-};
+int parseline(char* line, ProcessPipeline** ppls);
 
-#define OUTPIP  01
-#define INPIP   02
-
-extern struct command cmds[];
-extern char *infile, *outfile, *appfile;
-extern char bkgrnd;
-
-int parseline(char *);
-int promptline(char *, char *, int);
+int promptline(char *prompt, char *line, int sizline);
