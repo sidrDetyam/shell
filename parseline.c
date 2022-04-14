@@ -222,7 +222,9 @@ int parseline(char* line, ProcessPipeline** ppls){
 
     for(int i=0; i<cmds.cnt; ++i){
         int res = parse_ppl(cmds.ptr[i].line, *ppls + i);
-        (*ppls)[i].flags |= IS_BG;
+        if(cmds.ptr[i].is_bg) {
+            (*ppls)[i].flags |= IS_BG;
+        }
         if(res!=0){
             free(*ppls);
             vRawCmdLine_free(&cmds);

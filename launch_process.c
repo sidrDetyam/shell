@@ -16,37 +16,37 @@ void launch_process (Process *p,
         pgid = pid;
     }
 
-    setpgid (pid, pgid);
+    setpgid(pid, pgid);
     if(foreground) {
         tcsetpgrp(0, pgid);
     }
 
-    signal (SIGINT, SIG_DFL);
-    signal (SIGQUIT, SIG_DFL);
-    signal (SIGTSTP, SIG_DFL);
-    signal (SIGTTIN, SIG_DFL);
-    signal (SIGTTOU, SIG_DFL);
-    signal (SIGCHLD, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
+    signal(SIGQUIT, SIG_DFL);
+    signal(SIGTSTP, SIG_DFL);
+    signal(SIGTTIN, SIG_DFL);
+    signal(SIGTTOU, SIG_DFL);
+    signal(SIGCHLD, SIG_DFL);
 
 
     if (infile != STDIN_FILENO){
-        dup2 (infile, STDIN_FILENO);
+        dup2(infile, STDIN_FILENO);
         close (infile);
     }
 
     if (outfile != STDOUT_FILENO){
-        dup2 (outfile, STDOUT_FILENO);
-        close (outfile);
+        dup2(outfile, STDOUT_FILENO);
+        close(outfile);
     }
 
     if (errfile != STDERR_FILENO){
-        dup2 (errfile, STDERR_FILENO);
-        close (errfile);
+        dup2(errfile, STDERR_FILENO);
+        close(errfile);
     }
 
-    execvp (p->argv.ptr[0], p->argv.ptr);
-    perror ("execvp fail");
-    exit (1);
+    execvp(p->argv.ptr[0], p->argv.ptr);
+    perror("execvp fail");
+    exit(1);
 }
 
 
@@ -67,16 +67,13 @@ int launch_ppl (ProcessPipeline *ppl, int foreground){
 
     if(ppl->flags & IS_OUT_FILE){
         outfile = open(ppl->outfile,
-                       O_WRONLY | O_CREAT | (ppl->flags & IS_OUT_APPEND? O_APPEND : 0),
+                       O_WRONLY | O_CREAT | (ppl->flags & IS_OUT_APPEND? O_APPEND : O_TRUNC),
                        0777);
 
-        printf("\n%d\n", ppl->flags & IS_OUT_APPEND);
-
-        if(ppl->flags & IS_IN_FILE){
-            close(infile);
-        }
-
         if (outfile == -1) {
+            if(ppl->flags & IS_IN_FILE){
+                close(infile);
+            }
             return -2;
         }
     }
@@ -112,8 +109,14 @@ int launch_ppl (ProcessPipeline *ppl, int foreground){
         else{
             if(i==0) {
                 ppl->pgid = pid;
+                setpgid(pid, ppl->pgid);
+                if(foreground) {
+                    tcsetpgrp(0, ppl->pgid);
+                }
             }
-            setpgid(pid, ppl->pgid);
+            ppl->proc.ptr[i].pid = pid;
+            ppl->proc.ptr[i].flags = 0;
+            ppl->proc.ptr[i].status = 0;
         }
 
         if (infd != STDIN_FILENO) {

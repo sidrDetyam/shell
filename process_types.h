@@ -10,9 +10,14 @@ typedef char* charptr_t;
 #include"CVector.h"
 
 
+#define IS_PROCESS_COMPLETED 1
+#define IS_PROCESS_STOPPED 2
+
 struct Process{
     vcharptr_t argv;
     pid_t pid;
+    int flags;
+    int status;
 };
 typedef struct Process Process;
 
@@ -31,7 +36,6 @@ struct ProcessPipeline{
     vProcess proc;
     pid_t pgid;
     int flags;
-
     char* outfile;
     char* infile;
 };

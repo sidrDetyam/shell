@@ -24,7 +24,14 @@ typedef struct VECTOR VECTOR;
 
 #define REALLOC_RATIO 2
 
-static void CONCAT(VECTOR, _push_back) (struct VECTOR* vector, ELEMENT_TYPE* el){
+
+
+static ELEMENT_TYPE* CONCAT(VECTOR, _back) (struct VECTOR* vector){
+    return vector->ptr + vector->cnt-1;
+}
+
+
+static void CONCAT(VECTOR, _alloc) (struct VECTOR* vector){
 
     if(vector->cnt == vector->capacity){
         void* tmp = realloc(vector->ptr,
@@ -37,10 +44,16 @@ static void CONCAT(VECTOR, _push_back) (struct VECTOR* vector, ELEMENT_TYPE* el)
         vector->capacity = vector->capacity * REALLOC_RATIO + 1;
         vector->ptr = tmp;
     }
+}
 
+
+static void CONCAT(VECTOR, _push_back) (struct VECTOR* vector, ELEMENT_TYPE* el){
+
+    CONCAT(VECTOR, _alloc)(vector);
     memcpy(&vector->ptr[vector->cnt], el, sizeof(ELEMENT_TYPE));
     ++vector->cnt;
 }
+
 
 static void CONCAT(VECTOR, _init) (struct VECTOR* vector){
 
