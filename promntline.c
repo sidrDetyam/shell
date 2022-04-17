@@ -7,11 +7,14 @@
 int promptline(char *prompt, char *line, int sizline){
 
     int n = 0;
- 
+    printf("\x1B[32m");
+    fflush(stdout);
     if(write(1, prompt, strlen(prompt))==-1){
         perror("write fail");
         exit(1);
     }
+    printf("\x1B[0m$ ");
+    fflush(stdout);
     
     while (1) {
         n += read(0, (line + n), sizline-n);

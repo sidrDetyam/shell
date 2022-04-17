@@ -2,22 +2,34 @@
 #include "shellcommands.h"
 
 
-static void bg_command(vProcessPipeline* jobs, vcharptr_t* argv){
+static long get_index(vProcessPipeline* jobs, vcharptr_t* argv){
 
     if(argv->cnt != 3){
-        printf("\nIncorrect count of argc for bg\n\n");
-        return;
+        printf("\nIncorrect count of argc\n\n");
+        return -1;
     }
 
     errno = 0;
-    long ind = strtol(argv->ptr[1], NULL, 10);
-    if(errno!=0){
-        printf("\nIncorrect index for bg\n");
-        return;
+    char *end;
+    long ind = strtol(argv->ptr[1], &end, 10);
+    if(errno!=0 || end-argv->ptr[1] != strlen(argv->ptr[1])){
+        printf("\nIncorrect index\n\n");
+        return -1;
     }
 
     if(ind<0 || jobs->cnt<=ind || is_ppl_complete(jobs->ptr + ind)){
         printf("\nNo such job\n\n");
+        return -1;
+    }
+
+    return ind;
+}
+
+
+static void bg_command(vProcessPipeline* jobs, vcharptr_t* argv){
+
+    long ind = get_index(jobs, argv);
+    if(ind == -1){
         return;
     }
 
@@ -38,20 +50,8 @@ static void bg_command(vProcessPipeline* jobs, vcharptr_t* argv){
 
 static void fg_command(vProcessPipeline* jobs, vcharptr_t* argv){
 
-    if(argv->cnt != 3){
-        printf("\nIncorrect count of argc for fg\n\n");
-        return;
-    }
-
-    errno = 0;
-    long ind = strtol(argv->ptr[1], NULL, 10);
-    if(errno!=0){
-        printf("\nIncorrect index for fg\n");
-        return;
-    }
-
-    if(ind<0 || jobs->cnt<=ind || is_ppl_complete(jobs->ptr + ind)){
-        printf("\nNo such job\n\n");
+    long ind = get_index(jobs, argv);
+    if(ind == -1){
         return;
     }
 
@@ -100,20 +100,8 @@ static void exit_command() {
 
 static void kill_command(vProcessPipeline* jobs, vcharptr_t* argv){
 
-    if(argv->cnt != 3){
-        printf("\nIncorrect count of argc for killjob\n\n");
-        return;
-    }
-
-    errno = 0;
-    long ind = strtol(argv->ptr[1], NULL, 10);
-    if(errno!=0){
-        printf("\nIncorrect index for killjob\n");
-        return;
-    }
-
-    if(ind<0 || jobs->cnt<=ind || is_ppl_complete(jobs->ptr + ind)){
-        printf("\nNo such job\n\n");
+    long ind = get_index(jobs, argv);
+    if(ind == -1){
         return;
     }
 
@@ -141,11 +129,6 @@ void cd_command(char* currwd, vcharptr_t* argv){
         perror("getwd fail");
         exit(1);
     }
-
-    size_t tmp = strlen(currwd);
-    currwd[tmp] = '$';
-    currwd[tmp+1] = ' ';
-    currwd[tmp+2] = '\0';
 }
 
 
