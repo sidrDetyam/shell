@@ -6,11 +6,10 @@
 #include<errno.h>
 #include<string.h>
 
-///TODO - include guard if type was committed
+///TODO - include guard if type has committed(possible?)
 
 #define CONCAT(a,b) CONCAT_V(a,b)
 #define CONCAT_V(a,b) a##b
-
 
 #define VECTOR CONCAT(v, ELEMENT_TYPE)
 
@@ -22,8 +21,14 @@ struct VECTOR{
 };
 typedef struct VECTOR VECTOR;
 
+#ifndef REALLOC_RATIO
 #define REALLOC_RATIO 2
+#endif
 
+static void CONCAT(VECTOR, _assign) (struct VECTOR* vector, ELEMENT_TYPE* el, size_t ind){
+
+    memcpy(vector->ptr + ind, el, sizeof(ELEMENT_TYPE));
+}
 
 
 static ELEMENT_TYPE* CONCAT(VECTOR, _back) (struct VECTOR* vector){
@@ -62,6 +67,7 @@ static void CONCAT(VECTOR, _init) (struct VECTOR* vector){
     vector->capacity = 0;
 }
 
+
 static void CONCAT(VECTOR, _free) (struct VECTOR* vector){
 
     free(vector->ptr);
@@ -69,13 +75,17 @@ static void CONCAT(VECTOR, _free) (struct VECTOR* vector){
 }
 
 
+//if ELEMENT_TYPE is pointer to something
 static void CONCAT(VECTOR, _free_ptr) (struct VECTOR* vector){
 
-    int** ptr =  malloc(sizeof(int*));
+    int* foo;
+    int** ptr =  &foo;
     for(size_t i=0; i<vector->cnt; ++i){
         memcpy(ptr, &vector->ptr[i], sizeof(int*));
         free(*ptr);
     }
-    free(ptr);
     CONCAT(VECTOR, _free)(vector);
 }
+
+#undef ELEMENT_TYPE
+#undef REALLOC_RATIO

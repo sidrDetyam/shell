@@ -1,6 +1,16 @@
 
-#include "process_types.h"
+#ifndef SHELL
+#define SHELL
 
-int parseline(char* line, ProcessPipeline** ppls);
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include "processtypes.h"
 
+int parse_line(char* line, ProcessPipeline** ppls);
+
+#define MAX_CMD_LENGTH 4096
 int promptline(char *prompt, char *line, int sizline);
+
+#endif

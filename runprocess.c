@@ -1,15 +1,9 @@
 
-#include<stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include "process_types.h"
+#include "runprocess.h"
 
-void launch_process (Process *p,
-                     pid_t pgid,
-                     int infile, int outfile, int errfile,
-                     int foreground){
+static void start_process (Process *p, pid_t pgid,
+                    int infd, int outfd, int errfd,
+                    int fg){
 
     pid_t pid = getpid();
     if (pgid == 0){
@@ -17,7 +11,7 @@ void launch_process (Process *p,
     }
 
     setpgid(pid, pgid);
-    if(foreground) {
+    if(fg){
         tcsetpgrp(0, pgid);
     }
 
@@ -29,19 +23,19 @@ void launch_process (Process *p,
     signal(SIGCHLD, SIG_DFL);
 
 
-    if (infile != STDIN_FILENO){
-        dup2(infile, STDIN_FILENO);
-        close (infile);
+    if (infd != STDIN_FILENO){
+        dup2(infd, STDIN_FILENO);
+        close (infd);
     }
 
-    if (outfile != STDOUT_FILENO){
-        dup2(outfile, STDOUT_FILENO);
-        close(outfile);
+    if (outfd != STDOUT_FILENO){
+        dup2(outfd, STDOUT_FILENO);
+        close(outfd);
     }
 
-    if (errfile != STDERR_FILENO){
-        dup2(errfile, STDERR_FILENO);
-        close(errfile);
+    if (errfd != STDERR_FILENO){
+        dup2(errfd, STDERR_FILENO);
+        close(errfd);
     }
 
     execvp(p->argv.ptr[0], p->argv.ptr);
@@ -50,12 +44,12 @@ void launch_process (Process *p,
 }
 
 
-int launch_ppl (ProcessPipeline *ppl, int foreground){
+int start_ppl(ProcessPipeline *ppl, int fg){
 
     pid_t pid, pgid;
-    int mypipe[2], infile, outfile, outfd, infd;
+    int procpipe[2], infile, outfile, outfd, infd;
 
-    if(ppl->flags & IS_IN_FILE) {
+    if(ppl->flags & IS_PPL_IN_FILE) {
         infile = open(ppl->infile, O_RDONLY);
         if (infile == -1) {
             return -1;
@@ -65,13 +59,13 @@ int launch_ppl (ProcessPipeline *ppl, int foreground){
         infile = STDIN_FILENO;
     }
 
-    if(ppl->flags & IS_OUT_FILE){
+    if(ppl->flags & IS_PPL_OUT_FILE){
         outfile = open(ppl->outfile,
-                       O_WRONLY | O_CREAT | (ppl->flags & IS_OUT_APPEND? O_APPEND : O_TRUNC),
+                       O_WRONLY | O_CREAT | (ppl->flags & IS_PPL_OUT_APPEND? O_APPEND : O_TRUNC),
                        0777);
 
         if (outfile == -1) {
-            if(ppl->flags & IS_IN_FILE){
+            if(ppl->flags & IS_PPL_IN_FILE){
                 close(infile);
             }
             return -2;
@@ -84,33 +78,34 @@ int launch_ppl (ProcessPipeline *ppl, int foreground){
 
     for(int i=0; i < ppl->proc.cnt; ++i){
 
-        infd = i==0? infile : mypipe[0];
+        infd = i==0? infile : procpipe[0];
 
         if(i+1 != ppl->proc.cnt){
-            if (pipe (mypipe) < 0){
+            if (pipe (procpipe) < 0){
                 perror ("pipe fail");
                 exit (1);
             }
-            outfd = mypipe[1];
+            outfd = procpipe[1];
         }
         else{
             outfd = outfile;
         }
 
         pid = fork ();
-        if (pid == 0) {
-            launch_process(ppl->proc.ptr+i, i==0? getpid() : ppl->pgid, infd,
-                           outfd, STDERR_FILENO, foreground);
-        }
-        else if (pid < 0){
+        if (pid < 0){
             perror ("fork fail");
             exit (1);
+        }
+
+        if (pid == 0) {
+            start_process(ppl->proc.ptr+i, i==0? getpid() : ppl->pgid, infd,
+                            outfd, STDERR_FILENO, fg);
         }
         else{
             if(i==0) {
                 ppl->pgid = pid;
                 setpgid(pid, ppl->pgid);
-                if(foreground) {
+                if(fg) {
                     tcsetpgrp(0, ppl->pgid);
                 }
             }
@@ -126,5 +121,6 @@ int launch_ppl (ProcessPipeline *ppl, int foreground){
             close(outfd);
         }
     }
-}
 
+    return 0;
+}

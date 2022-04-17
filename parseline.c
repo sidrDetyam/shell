@@ -1,14 +1,9 @@
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <errno.h>
+
 #include "shell.h"
-#include "process_types.h"
 
 
- static char* blankskip(char *s){
+static char* blankskip(char *s){
     while (isspace(*s) && *s){
         ++s;
     }
@@ -28,7 +23,7 @@ typedef struct RawCmdLine RawCmdLine;
 static void split_cmds(char* line, vRawCmdLine* cmds){
 
     char* s = line;
-    static char cmd_delim[] = "\t&;\n";
+    static const char cmd_delim[] = "\t&;\n";
     vRawCmdLine_init(cmds);
 
     while(*s){
@@ -52,7 +47,7 @@ static void split_cmds(char* line, vRawCmdLine* cmds){
 
 static void extract_arg(char** s, char** arg){
 
-    static char delim[] = ">< \t\n";
+    static const char delim[] = ">< \t\n";
 
     char* arg_end = strpbrk(*s, delim);
     if(arg_end==NULL){
@@ -150,6 +145,11 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
     vProcess_init(&ppl->proc);
     ppl->infile = NULL;
     ppl->outfile = NULL;
+    if((ppl->cmd = (char*) malloc(strlen(line))) == NULL){
+        perror("allocation fail");
+        exit(1);
+    }
+    strcpy(ppl->cmd, line);
     ppl->flags = 0;
 
     char* s = line;
@@ -186,13 +186,13 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
 
             if(infile){
                 ppl->infile = infile;
-                ppl->flags |= IS_IN_FILE;
+                ppl->flags |= IS_PPL_IN_FILE;
             }
             if(outfile){
                 ppl->outfile = outfile;
-                ppl->flags |= IS_OUT_FILE;
+                ppl->flags |= IS_PPL_OUT_FILE;
                 if(is_append){
-                    ppl->flags |= IS_OUT_APPEND;
+                    ppl->flags |= IS_PPL_OUT_APPEND;
                 }
             }
         }
@@ -209,7 +209,7 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
 }
 
 
-int parseline(char* line, ProcessPipeline** ppls){
+int parse_line(char* line, ProcessPipeline** ppls){
 
     vRawCmdLine cmds;
     split_cmds(line, &cmds);
@@ -223,7 +223,7 @@ int parseline(char* line, ProcessPipeline** ppls){
     for(int i=0; i<cmds.cnt; ++i){
         int res = parse_ppl(cmds.ptr[i].line, *ppls + i);
         if(cmds.ptr[i].is_bg) {
-            (*ppls)[i].flags |= IS_BG;
+            (*ppls)[i].flags |= IS_PPL_BG;
         }
         if(res!=0){
             free(*ppls);

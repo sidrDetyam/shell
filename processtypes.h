@@ -12,6 +12,8 @@ typedef char* charptr_t;
 
 #define IS_PROCESS_COMPLETED 1
 #define IS_PROCESS_STOPPED 2
+//#define IS_PROCESS_BG 4
+#define IS_END_BY_SIGNAL 8
 
 struct Process{
     vcharptr_t argv;
@@ -22,24 +24,29 @@ struct Process{
 typedef struct Process Process;
 
 
-#define IS_BG 1
-#define IS_IN_FILE 2
-#define IS_OUT_FILE 4
-#define IS_OUT_APPEND 8
+#define IS_PPL_BG 1
+#define IS_PPL_IN_FILE 2
+#define IS_PPL_OUT_FILE 4
+#define IS_PPL_OUT_APPEND 8
 
 
 #define ELEMENT_TYPE Process
 #include"CVector.h"
 
-struct ProcessPipeline{
 
+struct ProcessPipeline{
     vProcess proc;
     pid_t pgid;
     int flags;
     char* outfile;
     char* infile;
+    char* cmd;
 };
 typedef struct ProcessPipeline ProcessPipeline;
+
+
+#define ELEMENT_TYPE ProcessPipeline
+#include "CVector.h"
 
 
 #endif
