@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <limits.h>
+#include <assert.h>
 
 #include "processtypes.h"
 #include "shell.h"
@@ -17,56 +18,62 @@
 
 int main(int argc, char *argv[]){
 
-    signal (SIGINT, SIG_IGN);
-    signal (SIGQUIT, SIG_IGN);
-    signal (SIGTSTP, SIG_IGN);
-    signal (SIGTTIN, SIG_IGN);
-    signal (SIGTTOU, SIG_IGN);
+    if(!isatty(0) || !isatty(1)){
+        perror("TTY");
+        exit(1);
+    }
+    set_sigs(SIG_IGN);
+
+    pid_t shell_pid = getpid();
+    if(setpgid(shell_pid, shell_pid)==-1){
+        perror("setpgid fail");
+        exit(1);
+    }
 
     char currwd[PATH_MAX];
     char line[MAX_CMD_LENGTH];
     cd_command(currwd, NULL);
 
-    vProcessPipeline jobs;
-    vProcessPipeline_init(&jobs);
+    vJob jobs;
+    vJob_init(&jobs);
 
     while (1){
 
         promptline(currwd, line, sizeof(line));
-        ProcessPipeline* ppls;
-        int nppls = parse_line(line, &ppls);
+        Job* parsed_jobs;
+        int jobs_count = parse_line(line, &parsed_jobs);
 
-        if(nppls<0){
+        if(jobs_count < 0){
             printf("\nsyntax error\n\n");
             continue;
         }
 
-        for (int i=0; i < nppls; i++) {
+        for (size_t i=0; i < jobs_count; i++) {
 
-            if(execute_shell_command(&jobs, currwd, ppls+i)){
+            if(execute_shell_command(&jobs, currwd, parsed_jobs + i)){
                 continue;
             }
 
             int ind = find_complete_job(&jobs);
             if(ind==-1){
-                vProcessPipeline_push_back(&jobs, ppls + i);
-                ind = jobs.cnt-1;
+                vJob_push_back(&jobs, parsed_jobs + i);
+                ind = (int) jobs.cnt-1;
             }
             else{
                 for(int j=0; j<jobs.ptr[ind].proc.cnt; ++j){
                     vcharptr_t_free_ptr(&jobs.ptr[ind].proc.ptr[j].argv);
                 }
                 free(jobs.ptr[ind].cmd);
-                vProcessPipeline_assign(&jobs, ppls+i, ind);
+                vJob_assign(&jobs, parsed_jobs + i, ind);
             }
 
             int res;
-            if(ppls[i].flags & IS_PPL_BG) {
-                res = start_ppl(jobs.ptr+ind, 0);
+            if(parsed_jobs[i].flags & IS_PPL_BG) {
+                res = start_job(jobs.ptr+ind, 0);
                 printf("[%d] %d\n", ind, (int)jobs.ptr[ind].pgid);
             }
             else {
-                res = start_ppl(jobs.ptr+ind, 1);
+                res = start_job(jobs.ptr+ind, 1);
                 wait_job(&jobs, jobs.ptr+ind);
             }
             
@@ -74,9 +81,12 @@ int main(int argc, char *argv[]){
                 printf("\nfail with in/out files\n\n");
             }
 
-            tcsetpgrp(0, getpid());
+            if(tcsetpgrp(0, shell_pid)==-1){
+                perror("tcsetpgrp fail");
+                exit(1);
+            }
         }
-        free(ppls);
+        free(parsed_jobs);
 
         update_status(&jobs);
     }

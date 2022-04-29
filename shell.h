@@ -8,7 +8,7 @@
 #include <string.h>
 #include "processtypes.h"
 
-int parse_line(char* line, ProcessPipeline** ppls);
+int parse_line(char* line, Job** jobs);
 
 #define MAX_CMD_LENGTH 4096
 int promptline(char *prompt, char *line, int sizline);

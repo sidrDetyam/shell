@@ -1,6 +1,59 @@
 
 #include "runprocess.h"
 
+
+static int intsfopen(const char* pathname, int flags, mode_t mode){
+    int fd;
+    while((fd = open(pathname, flags, mode))==-1){
+        if(errno!=EINTR){
+            return -1;
+        }
+    }
+    return fd;
+}
+
+
+static int intsfdup2(int oldfd, int newfd){
+    int fd;
+    while((fd = dup2(oldfd, newfd))==-1){
+        if(errno!=EINTR) {
+            return -1;
+        }
+    }
+    return fd;
+}
+
+
+static int intsfclose(int fd){
+    while(close(fd) == -1){
+        if(errno!=EINTR) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+
+static void input_redirection(int oldfd, int newfd){
+
+    if(oldfd != newfd){
+        if(intsfdup2(oldfd, newfd)==-1 || intsfclose(oldfd)==-1){
+            perror("dup2 || close fail");
+            exit(1);
+        }
+    }
+}
+
+
+void set_sigs(sighandler_t handler){
+    signal(SIGINT, handler);
+    signal(SIGQUIT, handler);
+    signal(SIGTSTP, handler);
+    signal(SIGTTIN, handler);
+    signal(SIGTTOU, handler);
+}
+
+
 static void start_process (Process *p, pid_t pgid,
                     int infd, int outfd, int errfd,
                     int fg){
@@ -10,33 +63,22 @@ static void start_process (Process *p, pid_t pgid,
         pgid = pid;
     }
 
-    setpgid(pid, pgid);
+    if(setpgid(pid, pgid)==-1){
+        perror("setpgid fail");
+        exit(1);
+    }
     if(fg){
-        tcsetpgrp(0, pgid);
+        if(tcsetpgrp(0, pgid)==-1){
+            perror("tcsetpgrp fail");
+            exit(1);
+        }
     }
 
-    signal(SIGINT, SIG_DFL);
-    signal(SIGQUIT, SIG_DFL);
-    signal(SIGTSTP, SIG_DFL);
-    signal(SIGTTIN, SIG_DFL);
-    signal(SIGTTOU, SIG_DFL);
-    signal(SIGCHLD, SIG_DFL);
+    set_sigs(SIG_DFL);
 
-
-    if (infd != STDIN_FILENO){
-        dup2(infd, STDIN_FILENO);
-        close (infd);
-    }
-
-    if (outfd != STDOUT_FILENO){
-        dup2(outfd, STDOUT_FILENO);
-        close(outfd);
-    }
-
-    if (errfd != STDERR_FILENO){
-        dup2(errfd, STDERR_FILENO);
-        close(errfd);
-    }
+    input_redirection(infd, STDIN_FILENO);
+    input_redirection(outfd, STDOUT_FILENO);
+    input_redirection(errfd, STDERR_FILENO);
 
     execvp(p->argv.ptr[0], p->argv.ptr);
     perror("execvp fail");
@@ -44,13 +86,13 @@ static void start_process (Process *p, pid_t pgid,
 }
 
 
-int start_ppl(ProcessPipeline *ppl, int fg){
+int start_job(Job *job, int fg){
 
     pid_t pid, pgid;
     int procpipe[2], infile, outfile, outfd, infd;
 
-    if(ppl->flags & IS_PPL_IN_FILE) {
-        infile = open(ppl->infile, O_RDONLY);
+    if(job->flags & IS_PPL_IN_FILE) {
+        infile = intsfopen(job->infile, O_RDONLY, 0);
         if (infile == -1) {
             return -1;
         }
@@ -59,14 +101,17 @@ int start_ppl(ProcessPipeline *ppl, int fg){
         infile = STDIN_FILENO;
     }
 
-    if(ppl->flags & IS_PPL_OUT_FILE){
-        outfile = open(ppl->outfile,
-                       O_WRONLY | O_CREAT | (ppl->flags & IS_PPL_OUT_APPEND? O_APPEND : O_TRUNC),
-                       0777);
+    if(job->flags & IS_PPL_OUT_FILE){
+        outfile = intsfopen(job->outfile,
+                       O_WRONLY | O_CREAT | (job->flags & IS_PPL_OUT_APPEND ? O_APPEND : O_TRUNC),
+                       S_IWUSR | S_IRUSR);
 
         if (outfile == -1) {
-            if(ppl->flags & IS_PPL_IN_FILE){
-                close(infile);
+            if(job->flags & IS_PPL_IN_FILE){
+                if(intsfclose(infile)==-1){
+                    perror("close fail");
+                    exit(1);
+                }
             }
             return -2;
         }
@@ -76,11 +121,11 @@ int start_ppl(ProcessPipeline *ppl, int fg){
     }
 
 
-    for(int i=0; i < ppl->proc.cnt; ++i){
+    for(size_t i=0; i < job->proc.cnt; ++i){
 
         infd = i==0? infile : procpipe[0];
 
-        if(i+1 != ppl->proc.cnt){
+        if(i+1 != job->proc.cnt){
             if (pipe (procpipe) < 0){
                 perror ("pipe fail");
                 exit (1);
@@ -98,27 +143,36 @@ int start_ppl(ProcessPipeline *ppl, int fg){
         }
 
         if (pid == 0) {
-            start_process(ppl->proc.ptr+i, i==0? getpid() : ppl->pgid, infd,
-                            outfd, STDERR_FILENO, fg);
+            start_process(job->proc.ptr + i, i == 0 ? getpid() : job->pgid, infd,
+                          outfd, STDERR_FILENO, fg);
         }
         else{
             if(i==0) {
-                ppl->pgid = pid;
-                setpgid(pid, ppl->pgid);
+                job->pgid = pid;
+                /*
+                 Call setpgid to avoid race condition when child 0
+                 hasn't called setpgid yet and we're already running the next one.
+                 There is no need to check for failure,
+                 because it will only if child 0 has already called execvp
+                 */
+                setpgid(pid, job->pgid);
                 if(fg) {
-                    tcsetpgrp(0, ppl->pgid);
+                    if(tcsetpgrp(0, job->pgid) == -1){
+                        perror("tcsetpgrp fail");
+                        exit(1);
+                    }
                 }
             }
-            ppl->proc.ptr[i].pid = pid;
-            ppl->proc.ptr[i].flags = 0;
-            ppl->proc.ptr[i].status = 0;
+            job->proc.ptr[i].pid = pid;
+            job->proc.ptr[i].flags = 0;
+            job->proc.ptr[i].status = 0;
         }
 
-        if (infd != STDIN_FILENO) {
-            close(infd);
-        }
-        if (outfd != STDOUT_FILENO) {
-            close(outfd);
+        if(infd!=STDIN_FILENO && intsfclose(infd)==-1 ||
+            outfd!=STDOUT_FILENO && intsfclose(outfd)==-1){
+
+            perror("close fail");
+            exit(1);
         }
     }
 

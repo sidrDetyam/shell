@@ -2,7 +2,7 @@
 #include "shellcommands.h"
 
 
-static long get_index(vProcessPipeline* jobs, vcharptr_t* argv){
+static long get_index(vJob* jobs, vcharptr_t* argv){
 
     if(argv->cnt != 3){
         printf("\nIncorrect count of argc\n\n");
@@ -17,7 +17,7 @@ static long get_index(vProcessPipeline* jobs, vcharptr_t* argv){
         return -1;
     }
 
-    if(ind<0 || jobs->cnt<=ind || is_ppl_complete(jobs->ptr + ind)){
+    if(ind<0 || jobs->cnt<=ind || is_job_complete(jobs->ptr + ind)){
         printf("\nNo such job\n\n");
         return -1;
     }
@@ -26,15 +26,15 @@ static long get_index(vProcessPipeline* jobs, vcharptr_t* argv){
 }
 
 
-static void bg_command(vProcessPipeline* jobs, vcharptr_t* argv){
+static void bg_command(vJob* jobs, vcharptr_t* argv){
 
     long ind = get_index(jobs, argv);
     if(ind == -1){
         return;
     }
 
-    ProcessPipeline *job = jobs->ptr + ind;
-    if(is_ppl_stopped(job)){
+    Job *job = jobs->ptr + ind;
+    if(is_job_stopped(job)){
         if(kill(-job->pgid, SIGCONT)==-1){
             perror("kill cont fail");
             exit(1);
@@ -44,18 +44,17 @@ static void bg_command(vProcessPipeline* jobs, vcharptr_t* argv){
     }
 
     printf("\nJob already running\n\n");
-    return;
 }
 
 
-static void fg_command(vProcessPipeline* jobs, vcharptr_t* argv){
+static void fg_command(vJob* jobs, vcharptr_t* argv){
 
     long ind = get_index(jobs, argv);
     if(ind == -1){
         return;
     }
 
-    ProcessPipeline *job = jobs->ptr + ind;
+    Job *job = jobs->ptr + ind;
     printf("%s\n", job->cmd);
     if(tcsetpgrp(0, job->pgid)==-1){
         perror("tcsetpgrp fail");
@@ -77,14 +76,14 @@ static void fg_command(vProcessPipeline* jobs, vcharptr_t* argv){
 }
 
 
-static void jobs_command(vProcessPipeline* jobs){
+static void jobs_command(vJob* jobs){
 
     printf("\n");
     for(size_t i=0; i<jobs->cnt; ++i){
-        if(!is_ppl_complete(jobs->ptr+i)){
+        if(!is_job_complete(jobs->ptr + i)){
             printf("[%zu] %s    %s\n",
                    i,
-                   is_ppl_stopped(jobs->ptr+i)? "stopped":"running",
+                   is_job_stopped(jobs->ptr + i) ? "stopped" : "running",
                    jobs->ptr[i].cmd
             );
         }
@@ -98,14 +97,14 @@ static void exit_command() {
 }
 
 
-static void kill_command(vProcessPipeline* jobs, vcharptr_t* argv){
+static void kill_command(vJob* jobs, vcharptr_t* argv){
 
     long ind = get_index(jobs, argv);
     if(ind == -1){
         return;
     }
 
-    ProcessPipeline *job = jobs->ptr + ind;
+    Job *job = jobs->ptr + ind;
     if(kill(-job->pgid, SIGKILL) == -1) {
         perror("kill (SIGCONT) fail");
         exit(1);
@@ -132,7 +131,7 @@ void cd_command(char* currwd, vcharptr_t* argv){
 }
 
 
-int execute_shell_command(vProcessPipeline* jobs, char* currwd, ProcessPipeline* cmd){
+int execute_shell_command(vJob* jobs, char* currwd, Job* cmd){
 
     if(cmd->proc.cnt!=1 || cmd->flags & (IS_PPL_IN_FILE | IS_PPL_OUT_APPEND | IS_PPL_BG)){
         return 0;

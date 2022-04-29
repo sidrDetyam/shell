@@ -7,7 +7,8 @@
 
 typedef char* charptr_t;
 #define ELEMENT_TYPE charptr_t
-#include"CVector.h"
+#include "CVector_def.h"
+
 
 
 #define IS_PROCESS_COMPLETED 1
@@ -31,10 +32,10 @@ typedef struct Process Process;
 
 
 #define ELEMENT_TYPE Process
-#include"CVector.h"
+#include "CVector_def.h"
 
 
-struct ProcessPipeline{
+struct Job{
     vProcess proc;
     pid_t pgid;
     int flags;
@@ -42,11 +43,11 @@ struct ProcessPipeline{
     char* infile;
     char* cmd;
 };
-typedef struct ProcessPipeline ProcessPipeline;
+typedef struct Job Job;
 
 
-#define ELEMENT_TYPE ProcessPipeline
-#include "CVector.h"
+#define ELEMENT_TYPE Job
+#include "CVector_def.h"
 
 
 #endif

@@ -17,7 +17,9 @@ struct RawCmdLine{
 };
 typedef struct RawCmdLine RawCmdLine;
 #define ELEMENT_TYPE RawCmdLine
-#include"CVector.h"
+#include "CVector_def.h"
+#define ELEMENT_TYPE RawCmdLine
+#include "CVector_impl.h"
 
 
 static void split_cmds(char* line, vRawCmdLine* cmds){
@@ -140,17 +142,17 @@ static int parse_cmd(char* cmd, vcharptr_t* argv, char** infile, char** outfile,
 }
 
 
-static int parse_ppl(char* line, ProcessPipeline* ppl){
+static int parse_job(char* line, Job* job){
 
-    vProcess_init(&ppl->proc);
-    ppl->infile = NULL;
-    ppl->outfile = NULL;
-    if((ppl->cmd = (char*) malloc(strlen(line))) == NULL){
+    vProcess_init(&job->proc);
+    job->infile = NULL;
+    job->outfile = NULL;
+    if((job->cmd = (char*) malloc(strlen(line))) == NULL){
         perror("allocation fail");
         exit(1);
     }
-    strcpy(ppl->cmd, line);
-    ppl->flags = 0;
+    strcpy(job->cmd, line);
+    job->flags = 0;
 
     char* s = line;
     while(*s){
@@ -166,33 +168,33 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
         vcharptr_t argv;
         int res = parse_cmd(s, &argv, &infile, &outfile, &is_append);
 
-        if(res!=0 || cmd_end && outfile || ppl->proc.cnt!=0 && infile){
+        if(res!=0 || cmd_end && outfile || job->proc.cnt!=0 && infile){
 
-                for(size_t i=0; i<ppl->proc.cnt; ++i){
-                    vcharptr_t_free_ptr(&ppl->proc.ptr[i].argv);
+                for(size_t i=0; i<job->proc.cnt; ++i){
+                    vcharptr_t_free_ptr(&job->proc.ptr[i].argv);
                 }
-                vProcess_free(&ppl->proc);
+                vProcess_free(&job->proc);
                 vcharptr_t_free_ptr(&argv);
                 free(infile);
                 free(outfile);
-                free(ppl->infile);
-                free(ppl->outfile);
+                free(job->infile);
+                free(job->outfile);
 
                 return -1;
         }
         else{
             Process proc = {argv, 0};
-            vProcess_push_back(&ppl->proc, &proc);
+            vProcess_push_back(&job->proc, &proc);
 
             if(infile){
-                ppl->infile = infile;
-                ppl->flags |= IS_PPL_IN_FILE;
+                job->infile = infile;
+                job->flags |= IS_PPL_IN_FILE;
             }
             if(outfile){
-                ppl->outfile = outfile;
-                ppl->flags |= IS_PPL_OUT_FILE;
+                job->outfile = outfile;
+                job->flags |= IS_PPL_OUT_FILE;
                 if(is_append){
-                    ppl->flags |= IS_PPL_OUT_APPEND;
+                    job->flags |= IS_PPL_OUT_APPEND;
                 }
             }
         }
@@ -209,24 +211,24 @@ static int parse_ppl(char* line, ProcessPipeline* ppl){
 }
 
 
-int parse_line(char* line, ProcessPipeline** ppls){
+int parse_line(char* line, Job** jobs){
 
     vRawCmdLine cmds;
     split_cmds(line, &cmds);
-    int cnt = cmds.cnt;
-    *ppls = malloc(sizeof(ProcessPipeline) * cmds.cnt);
-    if(*ppls==NULL){
+    int cnt = (int) cmds.cnt;
+    *jobs = malloc(sizeof(Job) * cmds.cnt);
+    if(*jobs == NULL){
         perror("allocation fail");
         exit(1);
     }
 
     for(int i=0; i<cmds.cnt; ++i){
-        int res = parse_ppl(cmds.ptr[i].line, *ppls + i);
+        int res = parse_job(cmds.ptr[i].line, *jobs + i);
         if(cmds.ptr[i].is_bg) {
-            (*ppls)[i].flags |= IS_PPL_BG;
+            (*jobs)[i].flags |= IS_PPL_BG;
         }
         if(res!=0){
-            free(*ppls);
+            free(*jobs);
             vRawCmdLine_free(&cmds);
             return -1;
         }

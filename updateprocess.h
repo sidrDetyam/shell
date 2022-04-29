@@ -11,18 +11,18 @@
 #include <sys/wait.h>
 #include "processtypes.h"
 
-int update_process(vProcessPipeline* ppls, siginfo_t *infop);
+int update_process(vJob* jobs, siginfo_t *infop);
 
-void update_status(vProcessPipeline* ppls);
+void update_status(vJob* jobs);
 
-int is_ppl_complete(ProcessPipeline* ppl);
+int is_job_complete(Job *ppl);
 
-int is_ppl_stopped(ProcessPipeline* ppl);
+int is_job_stopped(Job* job);
 
-int is_ppl_background(ProcessPipeline* ppl);
+int is_job_background(Job* job);
 
-void wait_job(vProcessPipeline* jobs, ProcessPipeline* job);
+void wait_job(vJob* jobs, Job* job);
 
-int find_complete_job(vProcessPipeline* ppls);
+int find_complete_job(vJob* jobs);
 
 #endif

@@ -1,12 +1,12 @@
 
 #include "updateprocess.h"
 
-int update_process(vProcessPipeline* ppls, siginfo_t *infop){
+int update_process(vJob* jobs, siginfo_t *infop){
 
-    for(int i=0; i<ppls->cnt; ++i) {
+    for(size_t i=0; i < jobs->cnt; ++i) {
 
-        for (int j = 0; j < ppls->ptr[i].proc.cnt; ++j) {
-            Process *p = ppls->ptr[i].proc.ptr + j;
+        for (size_t j = 0; j < jobs->ptr[i].proc.cnt; ++j) {
+            Process *p = jobs->ptr[i].proc.ptr + j;
 
             if (p->pid == infop->si_pid) {
                 p->status = infop->si_status;
@@ -14,9 +14,12 @@ int update_process(vProcessPipeline* ppls, siginfo_t *infop){
                 if (infop->si_code == CLD_STOPPED) {
                     p->flags |= IS_PROCESS_STOPPED;
                     
-                    if(!(ppls->ptr[i].flags & IS_PPL_BG)){
-                        ppls->ptr[i].flags |= IS_PPL_BG;
-                        tcsetpgrp(0, getpgid(getpid()));
+                    if(!(jobs->ptr[i].flags & IS_PPL_BG)){
+                        jobs->ptr[i].flags |= IS_PPL_BG;
+                        if(tcsetpgrp(0, getpid())==-1){
+                            perror("tcsetpgrp fail");
+                            exit(1);
+                        }
                     }
                 }
                 else if(infop->si_code == CLD_CONTINUED){
@@ -30,7 +33,7 @@ int update_process(vProcessPipeline* ppls, siginfo_t *infop){
                         p->flags |= IS_END_BY_SIGNAL;
                     }
 
-                    if(ppls->ptr[i].flags & IS_PPL_BG){
+                    if(jobs->ptr[i].flags & IS_PPL_BG){
                         if (CLD_KILLED == infop->si_code) {
                             printf("\n[%d]: Signal %d\n", (int) p->pid, p->status);
                         } else {
@@ -48,7 +51,7 @@ int update_process(vProcessPipeline* ppls, siginfo_t *infop){
 }
 
 
-void update_status(vProcessPipeline* ppls){
+void update_status(vJob* jobs){
 
     siginfo_t infop;
     int res;
@@ -57,17 +60,17 @@ void update_status(vProcessPipeline* ppls){
         res = waitid(P_ALL, 0, &infop, WEXITED | WSTOPPED | WCONTINUED | WNOHANG);
 
         if(res==0 && infop.si_pid!=0) {
-            update_process(ppls, &infop);
+            update_process(jobs, &infop);
         }
 
     }while(res==0 && infop.si_pid!=0);
 }
 
 
-int is_ppl_complete(ProcessPipeline* ppl){
+int is_job_complete(Job* job){
 
-    for(int i=0; i<ppl->proc.cnt; ++i){
-        if(!(ppl->proc.ptr[i].flags & IS_PROCESS_COMPLETED)){
+    for(size_t i=0; i<job->proc.cnt; ++i){
+        if(!(job->proc.ptr[i].flags & IS_PROCESS_COMPLETED)){
             return 0;
         }
     }
@@ -76,10 +79,10 @@ int is_ppl_complete(ProcessPipeline* ppl){
 }
 
 
-int is_ppl_stopped(ProcessPipeline* ppl){
+int is_job_stopped(Job* job){
 
-    for(int i=0; i<ppl->proc.cnt; ++i){
-        if(ppl->proc.ptr[i].flags & IS_PROCESS_STOPPED){
+    for(size_t i=0; i < job->proc.cnt; ++i){
+        if(job->proc.ptr[i].flags & IS_PROCESS_STOPPED){
             return 1;
         }
     }
@@ -88,25 +91,25 @@ int is_ppl_stopped(ProcessPipeline* ppl){
 }
 
 
-int is_ppl_background(ProcessPipeline* ppl){
+int is_job_background(Job* job){
 
-    return (ppl->flags & IS_PPL_BG) != 0;
+    return (job->flags & IS_PPL_BG) != 0;
 }
 
 
-void wait_job(vProcessPipeline* jobs, ProcessPipeline* job){
+void wait_job(vJob* jobs, Job* job){
 
     do{
         update_status(jobs);
-    }while(!is_ppl_complete(job) && !is_ppl_background(job) && !is_ppl_stopped(job));
+    }while(!is_job_complete(job) && !is_job_background(job) && !is_job_stopped(job));
 }
 
 
-int find_complete_job(vProcessPipeline* ppls){
+int find_complete_job(vJob* jobs){
 
-    for(int i=0; i<ppls->cnt; ++i){
-        if(is_ppl_complete(ppls->ptr + i)){
-            return i;
+    for(size_t i=0; i < jobs->cnt; ++i){
+        if(is_job_complete(jobs->ptr + i)){
+            return (int)i;
         }
     }
 
