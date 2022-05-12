@@ -14,7 +14,7 @@
 
 typedef void (*sighandler_t)(int);
 
-void set_sigs(sighandler_t handler);
+void set_sigs(int is_block);
 
 int start_job(Job *ppl, int fg);
 

@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
         perror("TTY");
         exit(1);
     }
-    set_sigs(SIG_IGN);
+    set_sigs(1);
 
     pid_t shell_pid = getpid();
     if(setpgid(shell_pid, shell_pid)==-1){

@@ -45,12 +45,18 @@ static void input_redirection(int oldfd, int newfd){
 }
 
 
-void set_sigs(sighandler_t handler){
-    signal(SIGINT, handler);
-    signal(SIGQUIT, handler);
-    signal(SIGTSTP, handler);
-    signal(SIGTTIN, handler);
-    signal(SIGTTOU, handler);
+void set_sigs(int is_block){
+
+    sigset_t mask;
+    sigemptyset(&mask);
+    if(is_block) {
+        sigaddset(&mask, SIGINT);
+        sigaddset(&mask, SIGQUIT);
+        sigaddset(&mask, SIGTSTP);
+        sigaddset(&mask, SIGTTIN);
+        sigaddset(&mask, SIGTTOU);
+    }
+    sigprocmask(SIG_SETMASK, &mask, NULL);
 }
 
 
@@ -74,7 +80,7 @@ static void start_process (Process *p, pid_t pgid,
         }
     }
 
-    set_sigs(SIG_DFL);
+    set_sigs(0);
 
     input_redirection(infd, STDIN_FILENO);
     input_redirection(outfd, STDOUT_FILENO);
