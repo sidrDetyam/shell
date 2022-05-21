@@ -34,6 +34,8 @@ void CONCAT(VECTOR, _alloc) (struct VECTOR* vector);
 
 void CONCAT(VECTOR, _push_back) (struct VECTOR* vector, ELEMENT_TYPE* el);
 
+void CONCAT(VECTOR, _pop_back) (struct VECTOR* vector);
+
 void CONCAT(VECTOR, _init) (struct VECTOR* vector);
 
 void CONCAT(VECTOR, _free) (struct VECTOR* vector);

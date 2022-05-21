@@ -45,6 +45,11 @@ void CONCAT(VECTOR, _push_back) (struct VECTOR* vector, ELEMENT_TYPE* el){
 }
 
 
+void CONCAT(VECTOR, _pop_back) (struct VECTOR* vector){
+    --vector->cnt;
+}
+
+
 void CONCAT(VECTOR, _init) (struct VECTOR* vector){
 
     vector->cnt = 0;
