@@ -37,9 +37,24 @@ int main(int argc, char *argv[]){
     vJob jobs;
     vJob_init(&jobs);
 
+    vcharptr_t cmd_history;
+    vcharptr_t_init(&cmd_history);
+
     while (1){
 
-        promptline(currwd, line, sizeof(line));
+        promptline(currwd, line, &cmd_history);
+        char* cmd = malloc(strlen(line)+1);
+        if(cmd==NULL){
+            perror("allocation fail");
+            exit(1);
+        }
+
+        if(strlen(line)==0){
+            continue;
+        }
+        strcpy(cmd, line);
+        vcharptr_t_push_back(&cmd_history, &cmd);
+
         Job* parsed_jobs;
         int jobs_count = parse_line(line, &parsed_jobs);
 
