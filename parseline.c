@@ -22,11 +22,30 @@ typedef struct RawCmdLine RawCmdLine;
 #include "CVector_impl.h"
 
 
-static void split_cmds(char* line, vRawCmdLine* cmds){
+static char* strpbrk_escaped(const char* s, const char* cmd_delim, int* is_escaped){
+
+    static char t[2] = " ";
+    for(const char* i = s; *i!='\0'; ++i){
+        t[0] = *i;
+        if(strpbrk(cmd_delim, t)!=NULL && *is_escaped % 2 == 0){
+            return (char*)i;
+        }
+
+        if(*i == '"'){
+            *is_escaped = (*is_escaped+1)%2;
+        }
+    }
+
+    return NULL;
+}
+
+
+static int split_cmds(char* line, vRawCmdLine* cmds){
 
     char* s = line;
     static const char cmd_delim[] = "\t&;\n";
     vRawCmdLine_init(cmds);
+    int is_escaped = 0;
 
     while(*s){
         s = blankskip(s);
@@ -34,7 +53,12 @@ static void split_cmds(char* line, vRawCmdLine* cmds){
             break;
         }
 
-        char* tmp = strpbrk(s, cmd_delim);
+        char* tmp = strpbrk_escaped(s, cmd_delim, &is_escaped);
+        if(is_escaped){
+            vRawCmdLine_free(cmds);
+            return 0;
+        }
+
         RawCmdLine cmdline = {s, tmp!=NULL && *tmp == '&'};
         vRawCmdLine_push_back(cmds, &cmdline);
         s = tmp;
@@ -44,21 +68,30 @@ static void split_cmds(char* line, vRawCmdLine* cmds){
         }
         *s++ = '\0';
     }
+
+    return 1;
 }
 
 
 static void extract_arg(char** s, char** arg){
 
-    static const char delim[] = ">< \t\n";
+    static const char delim[] = "\">< \t\n";
 
-    char* arg_end = strpbrk(*s, delim);
-    if(arg_end==NULL){
-        arg_end = *s;
-        while(*arg_end){
-            ++arg_end;
+    char* arg_end;
+    if(**s == '"'){
+        ++*s;
+        arg_end = strchr(*s, '"');
+    }
+    else{
+        arg_end = strpbrk(*s, delim);
+        if(arg_end==NULL){
+            arg_end = *s;
+            while(*arg_end){
+                ++arg_end;
+            }
         }
     }
-    
+
     *arg = (char*) malloc(arg_end - *s + 1);
     if(*arg==NULL){
         perror("allocation fail");
@@ -68,6 +101,9 @@ static void extract_arg(char** s, char** arg){
     memcpy(*arg, *s, arg_end-*s);
     (*arg)[arg_end-*s] = '\0';
     *s = arg_end;
+    if(**s == '"'){
+        ++*s;
+    }
 }
 
 
@@ -154,10 +190,13 @@ static int parse_job(char* line, Job* job){
     strcpy(job->cmd, line);
     job->flags = 0;
 
+    static const char delim[2] = "|";
+    int is_escaped = 0;
+
     char* s = line;
     while(*s){
 
-        char* cmd_end = strchr(s, '|');
+        char* cmd_end = strpbrk_escaped(s, delim, &is_escaped);
         if(cmd_end){
             *cmd_end = '\0';
         }
@@ -214,7 +253,11 @@ static int parse_job(char* line, Job* job){
 int parse_line(char* line, Job** jobs){
 
     vRawCmdLine cmds;
-    split_cmds(line, &cmds);
+    if(!split_cmds(line, &cmds)){
+        return -1;
+    }
+
+
     int cnt = (int) cmds.cnt;
     *jobs = malloc(sizeof(Job) * cmds.cnt);
     if(*jobs == NULL){
