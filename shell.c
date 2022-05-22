@@ -53,7 +53,9 @@ int main(int argc, char *argv[]){
             continue;
         }
         strcpy(cmd, line);
-        vcharptr_t_push_back(&cmd_history, &cmd);
+        if(cmd_history.cnt==0 || strcmp(*vcharptr_t_back(&cmd_history), line)!=0){
+            vcharptr_t_push_back(&cmd_history, &cmd);
+        }
 
         Job* parsed_jobs;
         int jobs_count = parse_line(line, &parsed_jobs);
