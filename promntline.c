@@ -77,6 +77,7 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
 
         if(cnt==1){
             switch (read_buff[0]) {
+
                 case 10:
                     input_buff[rpos] = '\0';
                     putchar('\n');
@@ -87,7 +88,14 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
                     if(curr>0){
                         backspace(input_buff, &curr, &rpos);
                     }
+                    else{
+                        putchar('\a');
+                    }
                     continue;
+
+                case 9:
+                    //TODO - add handler of tab
+                    read_buff[0] = ' ';
 
                 default:
                     insert_character(input_buff, &curr, &rpos, read_buff[0]);
@@ -104,6 +112,9 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
                         --curr;
                         putchar('\010');
                     }
+                    else{
+                        putchar('\a');
+                    }
                     continue;
 
                 case 'C':
@@ -111,6 +122,9 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
                         ++curr;
                         printf("\033[1C");
                         fflush(stdout);
+                    }
+                    else{
+                        putchar('\a');
                     }
                     continue;
 
@@ -120,9 +134,8 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
                         putchar(' ');
                     }
                     for(int i=0; i<rpos; ++i){
-                        putchar('\010');
-                        putchar(' ');
-                        putchar('\010');
+                        printf("\010 \010");
+                        fflush(stdout);
                     }
                     *is_up = read_buff[2] == 'A';
                     return 0;
@@ -157,10 +170,16 @@ int promptline(const char *prompt, char *line, vcharptr_t* history){
             if(curr>0) {
                 --curr;
             }
+            else{
+                putchar('\a');
+            }
             continue;
         }
         if(curr < history->cnt - 1){
             ++curr;
+        }
+        else{
+            putchar('\a');
         }
     }
     vcharptr_t_pop_back(history);
