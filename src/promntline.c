@@ -1,5 +1,5 @@
 
-#include "shell.h"
+#include "../include/shell.h"
 
 
 static void init_tty(struct termios* savtty){
@@ -145,7 +145,7 @@ static int input_cmd(char* res, const char* original_cmd, int *is_up){
 }
 
 
-int promptline(const char *prompt, char *line, vcharptr_t* history){
+void promptline(const char *prompt, char *line, vcharptr_t* history){
 
     printf("\x1B[32m");
     fflush(stdout);
@@ -160,7 +160,7 @@ int promptline(const char *prompt, char *line, vcharptr_t* history){
     init_tty(&savetty);
     int is_up;
 
-    static char empty[0] = "";
+    char empty[10] = "";
     char* tmp_ptr = empty;
     vcharptr_t_push_back(history, &tmp_ptr);
 

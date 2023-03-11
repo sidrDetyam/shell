@@ -1,5 +1,5 @@
 
-#include "updateprocess.h"
+#include "../include/updateprocess.h"
 
 int update_process(vJob* jobs, siginfo_t *infop){
 

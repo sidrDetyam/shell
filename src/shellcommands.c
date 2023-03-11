@@ -1,5 +1,5 @@
 
-#include "shellcommands.h"
+#include "../include/shellcommands.h"
 
 
 static long get_index(vJob* jobs, vcharptr_t* argv){

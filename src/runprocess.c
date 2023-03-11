@@ -1,5 +1,5 @@
 
-#include "runprocess.h"
+#include "../include/runprocess.h"
 
 
 static int intsfopen(const char* pathname, int flags, mode_t mode){

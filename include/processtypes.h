@@ -7,7 +7,7 @@
 
 typedef char* charptr_t;
 #define ELEMENT_TYPE charptr_t
-#include "CVector_def.h"
+#include "../utils/CVector_def.h"
 
 
 
@@ -32,7 +32,7 @@ typedef struct Process Process;
 
 
 #define ELEMENT_TYPE Process
-#include "CVector_def.h"
+#include "../utils/CVector_def.h"
 
 
 struct Job{
@@ -47,7 +47,7 @@ typedef struct Job Job;
 
 
 #define ELEMENT_TYPE Job
-#include "CVector_def.h"
+#include "../utils/CVector_def.h"
 
 
 #endif

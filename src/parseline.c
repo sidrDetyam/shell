@@ -1,6 +1,6 @@
 
 
-#include "shell.h"
+#include "../include/shell.h"
 
 
 static char* blankskip(char *s){
@@ -17,9 +17,9 @@ struct RawCmdLine{
 };
 typedef struct RawCmdLine RawCmdLine;
 #define ELEMENT_TYPE RawCmdLine
-#include "CVector_def.h"
+#include "../utils/CVector_def.h"
 #define ELEMENT_TYPE RawCmdLine
-#include "CVector_impl.h"
+#include "../utils/CVector_impl.h"
 
 
 static char* strpbrk_escaped(const char* s, const char* cmd_delim, int* is_escaped){

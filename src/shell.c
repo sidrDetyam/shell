@@ -9,11 +9,11 @@
 #include <limits.h>
 #include <assert.h>
 
-#include "processtypes.h"
-#include "shell.h"
-#include "updateprocess.h"
-#include "runprocess.h"
-#include "shellcommands.h"
+#include "../include/processtypes.h"
+#include "../include/shell.h"
+#include "../include/updateprocess.h"
+#include "../include/runprocess.h"
+#include "../include/shellcommands.h"
 
 
 int main(int argc, char *argv[]){

@@ -15,6 +15,6 @@
 int parse_line(char* line, Job** jobs);
 
 #define MAX_CMD_LENGTH 4096
-int promptline(const char *prompt, char *line, vcharptr_t* history);
+void promptline(const char *prompt, char *line, vcharptr_t* history);
 
 #endif
