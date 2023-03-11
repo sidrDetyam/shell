@@ -5,10 +5,10 @@
 #include <sys/types.h>
 
 
-typedef char* charptr_t;
+typedef char *charptr_t;
 #define ELEMENT_TYPE charptr_t
-#include "../utils/CVector_def.h"
 
+#include "../utils/CVector_def.h"
 
 
 #define IS_PROCESS_COMPLETED 1
@@ -16,7 +16,7 @@ typedef char* charptr_t;
 //#define IS_PROCESS_BG 4
 #define IS_END_BY_SIGNAL 8
 
-struct Process{
+struct Process {
     vcharptr_t argv;
     pid_t pid;
     int flags;
@@ -32,21 +32,23 @@ typedef struct Process Process;
 
 
 #define ELEMENT_TYPE Process
+
 #include "../utils/CVector_def.h"
 
 
-struct Job{
+struct Job {
     vProcess proc;
     pid_t pgid;
     int flags;
-    char* outfile;
-    char* infile;
-    char* cmd;
+    char *outfile;
+    char *infile;
+    char *cmd;
 };
 typedef struct Job Job;
 
 
 #define ELEMENT_TYPE Job
+
 #include "../utils/CVector_def.h"
 
 

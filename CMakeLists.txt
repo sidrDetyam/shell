@@ -7,4 +7,4 @@ file(GLOB sources src/*.c)
 
 file(GLOB headers include/*.c)
 
-add_executable(shell ${sources} ${headers})
+add_executable(shell ${sources} ${headers} include/promntline.h)
